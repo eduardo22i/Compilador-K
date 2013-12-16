@@ -1,0 +1,19 @@
+ funcion(int x, int y){
+
+ 
+	if(x<y){
+		printf("x es mayor a y");
+		#	mayor = x;
+	}else
+		
+	;
+			mayor =y;
+	}
+	#
+$
+	if(x==y){
+		printf("x es igual a y");
+	}
+	
+return mayor ;
+}

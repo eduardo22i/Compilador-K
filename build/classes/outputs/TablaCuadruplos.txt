@@ -1,0 +1,43 @@
+op Etiq |res _s |
+op = |arg1 2 |arg2  |res t0 |
+op = |arg1 t0 |res sa |
+op = |arg1 "holaaaaaa" |arg2  |res t1 |
+op = |arg1 t1 |res so |
+op = |arg1 2.3 |arg2  |res t2 |
+op = |arg1 t2 |res sap |
+op if< |arg1 sa |arg2 4 |res  |
+op GOTO |res  |
+op + |arg1 2 |arg2 2 |res t3 |
+op = |arg1 t3 |res saw2 |
+op printf |arg1  |arg2  |res sap |
+op scanf |arg1  |arg2  |res sa |
+op printf |arg1  |arg2  |res "hola que pedos" |
+op * |arg1 4 |arg2 7 |res t4 |
+op / |arg1 3 |arg2 t4 |res t5 |
+op + |arg1 sa |arg2 t5 |res t6 |
+op = |arg1 t6 |res s2 |
+op / |arg1 2 |arg2 3 |res t7 |
+op + |arg1 t7 |arg2 4 |res t8 |
+op = |arg1 t8 |res op |
+op if== |arg1 op |arg2 3.2 |res  |
+op GOTO |res  |
+op printf |arg1  |arg2  |res "funciona super bien el print" |
+op + |arg1 2 |arg2 2 |res t9 |
+op = |arg1 t9 |res saw |
+op ret |res 2 |
+op Etiq |res _main |
+op = |arg1 2.8 |arg2  |res t10 |
+op = |arg1 t10 |res op |
+op if!= |arg1 op |arg2 3.2 |res  |
+op GOTO |res  |
+op + |arg1 2 |arg2 2 |res t11 |
+op = |arg1 t11 |res saw |
+op = |arg1 3 |arg2  |res t12 |
+op = |arg1 t12 |res q |
+op = |arg1 2 |arg2  |res t13 |
+op = |arg1 t13 |res p |
+op printf |arg1  |arg2  |res "este es el final" |
+op param |res q |
+op param |res p |
+op call |res _s |
+op ret |res 0 |

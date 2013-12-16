@@ -1,0 +1,36 @@
+int main(){
+
+float f =2.5;
+char c = 'c';
+
+/*
+este es un
+bloque de comentario
+probando...
+
+
+cheque*/
+
+String valor  funcion('c');
+
+int numero = 3+(5+7)*5/(2+5-6+7)+2*9
+
+return 0;
+}
+
+String funcion(char c{
+String respuesta;
+i(c !='c' && c!= 'd' && c!= 'e' ){
+
+respuesta = "es diferente a c,d,e";
+
+}else if(c =='p' || c== 'x' || c== 'a' ){
+respuesta = "es igual a 'p' o 'x' o 'a' ;
+}else if(c =='y' || c== 't' || c== 'r'){
+respuesta = " es igual a 'y' o 't'o 'r' ";
+} else{
+respuesta = "es igual a c";
+}
+
+
+}

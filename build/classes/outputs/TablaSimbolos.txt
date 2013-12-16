@@ -1,0 +1,28 @@
+id: s tipo: integer ambito: inicio valor: 2 offset: 0
+
+id: s tipo: integer ambito: inicio.s valor:  offset: 4
+
+id: p tipo: integer ambito: inicio.s valor:  offset: 4
+
+id: sa tipo: integer ambito: inicio.s valor: 2 offset: 4
+
+id: so tipo: string ambito: inicio.s valor: "holaaaaaa" offset: 0
+
+id: sap tipo: float ambito: inicio.s valor: 2.3 offset: 4
+
+id: saw2 tipo: integer ambito: inicio.s valor: 2+2 offset: 4
+
+id: s2 tipo: integer ambito: inicio.s valor: 2+3/4*7 offset: 4
+
+id: op tipo: float ambito: inicio.s valor: (2/3)+4 offset: 4
+
+id: saw tipo: integer ambito: inicio.s valor: 2+2 offset: 4
+
+id: op tipo: float ambito: inicio.main valor: 2.8 offset: 4
+
+id: saw tipo: integer ambito: inicio.main valor: 2+2 offset: 4
+
+id: q tipo: integer ambito: inicio.main valor: 3 offset: 4
+
+id: p tipo: integer ambito: inicio.main valor: 2 offset: 4
+

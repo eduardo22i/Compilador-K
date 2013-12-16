@@ -1,0 +1,1780 @@
+
+package compilador_k;
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.awt.Color;
+import semantico.*;
+
+parser code {:
+public ArrayList<lineaTabla> funciones = new ArrayList<lineaTabla>();
+public ArrayList<String> erroresSemanticos  =new ArrayList<String>();
+public ArrayList<String> lista = new ArrayList<String>();
+public ArrayList<String> paramsId = new ArrayList<String>();
+public ArrayList<type> parametros = new ArrayList<type>();
+public ArrayList<id_params> id_par = new ArrayList<id_params>();
+public ArrayList<String> tipitos = new ArrayList<String>();
+public int control =0;
+public String ambito = "inicio";
+public String ambito_inicial = ambito;
+public String tipito = "";
+public tablaSimbolos tablaSim = new tablaSimbolos();
+public String expression ="";
+public int contador =0;
+
+public String genNombre(){
+    return ""+contador++;
+}
+
+public void agregarAmbito(String ambi){
+    ambito = ambito + "." +ambi;
+}
+public String resetAmbito(){
+    String ambito_nuevo = ambito.substring(ambito.lastIndexOf("."));
+    ambito = ambito.substring(0,ambito.lastIndexOf("."));
+    return ambito_nuevo;
+}
+public void syntax_error(Symbol token){
+    //System.out.println("error en el token "+ token.value + " En la linea: "+ token.left+1+ " en la columna: "+token.right+1);
+    Interfaz.salida.setForeground(Color.RED);
+    Interfaz.salida.setText(Interfaz.salida.getText()+"Error sintactico en: '"+ token.value + "' En la linea: "+ (token.left+1) + " en la columna: "+(token.right+1) +"\n");  
+    Interfaz.error = 1;
+}
+public void unrecovered_syntax_error(Symbol token){
+
+}
+
+
+:};
+
+terminal INT_LITERAL,FLOAT_LITERAL,CHAR_LITERAL;
+terminal String ID,MINUS,PLUS,MULT,DIV,OPERADORES, ASSIGNATIONS;
+terminal STRING_LITERAL;
+terminal VOID,SEMICOLON,COMMA;
+terminal PAR_LEFT,PAR_RIGHT,BRACK_LEFT,BRACK_RIGHT;
+terminal String INCREMENTADORES;
+terminal INT,STRING,FLOAT,CHAR;
+terminal IF,ELSE,FOR,WHILE, ELSEIF;
+terminal PRINTF,SCANF,OR,AND,AMPERSAND;
+terminal MAIN,RETURN;
+
+non terminal tipos, literal,literal_String, statements, inicio, inicial, tipo_void;
+non terminal  statement,incremento, assignaciones, lista_parametros,lista_parametros2;
+non terminal  op_aritmeticas,lista_assig,return_value,lista_assig2,lista_assig3,elseif_stment,asig_or_and, operaciones;
+
+
+start with inicio;
+
+inicio ::=statements;
+
+statements ::=statement statements
+            |statement
+            {:if (parser.tablaSim.getLineasTabla().size() != 0){
+                    Interfaz.tabla =parser.tablaSim;
+                }:}
+            ;
+            
+statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT   
+             {:Interfaz.error_main = Interfaz.error_main+1;
+                Interfaz.error_main = Interfaz.error_main2+1;
+                if(!parser.ambito.equals("inicio")){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR: El main no puede estar adentro de otra funcion, en la linea: "+(linealeft+1)+" en la columna: "+(linearight+1)+"\n");
+                 }
+                if(parser.tablaSim.existeEnTabla("main","inicio")){
+                    
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede estar declarado mas de un Main(), en la linea: "+(linealeft+1)+" en la columna: "+(linearight+1)+"\n");
+                }
+                else{
+                    //parser.tablaSim.agregar("main",new integerType(),"inicio","");
+                    parser.agregarAmbito("main");
+                   // System.out.print(parser.tablaSim.getLineasTabla()+ "\n");
+                }
+             :}
+             
+             statements RETURN literal SEMICOLON BRACK_RIGHT
+             {:parser.resetAmbito();
+             :}
+
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements  BRACK_RIGHT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+              
+              }
+                :}
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSE BRACK_LEFT statements BRACK_RIGHT
+               {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+              }else{
+                 //parser.agregarAmbito("if"+parser.genNombre()); 
+              }
+                :}
+               
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+               }else{
+                 parser.agregarAmbito("if"+parser.genNombre()); 
+              }
+                :}
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT elseif_stment 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+              
+              }
+                :}
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSE BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+              }else{
+                 //parser.agregarAmbito("if"+parser.genNombre()); 
+              }
+                :}
+                statements BRACK_RIGHT 
+                {://parser.resetAmbito();:}
+              |IF:ifs PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT elseif_stment ELSE BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(ifsleft+1) + " en la columna: "+(ifsright+1)+"\n");
+              }else{
+                 //parser.agregarAmbito("if"+parser.genNombre()); 
+              }
+                :}
+                statements BRACK_RIGHT 
+                {://parser.resetAmbito();:}
+              |FOR:fort PAR_LEFT inicial:inicial SEMICOLON assignaciones:assig SEMICOLON incremento PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(fortleft+1) + " en la columna: "+(fortright+1)+"\n");
+               }else{
+               //parser.agregarAmbito("for"+parser.genNombre());
+               }
+                :}
+              statements BRACK_RIGHT
+              {://parser.resetAmbito();:}
+              |WHILE:while2 PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(while2left+1) + " en la columna: "+(while2right+1)+"\n");
+               }else{
+                   //parser.agregarAmbito("while"+parser.genNombre()); 
+               }
+                :}
+              statements BRACK_RIGHT 
+              {://parser.resetAmbito();:}
+
+              |tipo_void:tipo ID:id PAR_LEFT PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }else{
+                lineaTabla funcioncita=new lineaTabla(id.toString(),new functionType(null,(type)tipo),parser.ambito,"",0);
+                parser.id_par.add(new id_params(id.toString()));
+                parser.tablaSim.agregar(funcioncita);
+                }
+                parser.agregarAmbito(id.toString());
+                 }else{
+                    parser.control =1;
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede declararse una funcion dentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+              statements BRACK_RIGHT
+              {:if(parser.control!=1){
+                parser.resetAmbito();               
+                 }else{
+                 parser.control =0;
+                 }
+              :}
+
+              |tipos:tipo ID:id PAR_LEFT lista_parametros PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }else{
+                         Collections.reverse(parser.parametros);
+                    type[] temp = new type[parser.parametros.size()];
+                    int contador =0;
+                    for(type i :parser.parametros){
+                        temp[contador] = i;
+                        contador++;
+                    }
+                    lineaTabla funcioncita=new lineaTabla(id.toString(),new functionType(parser.parametros,(type)tipo),parser.ambito,"",0);
+                    parser.id_par.add(new id_params(id.toString(),parser.parametros));
+                    parser.tablaSim.agregar(funcioncita);
+                    parser.agregarAmbito(id.toString());
+                    Collections.reverse(parser.paramsId);
+                    int cont =0;
+                    for(String i : parser.paramsId){
+                            if(parser.tablaSim.existeEnTabla(i.toString(),parser.ambito)){
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+i +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                            }else{
+                                parser.tablaSim.agregar(i.toString(),temp[cont],parser.ambito,"");
+                             //  System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                                cont++;
+                            }
+                   }
+                }
+                parser.parametros.clear();
+               parser.paramsId.clear();
+               }else{
+                    parser.control =1;
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede declararse una funcion dentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    parser.parametros.clear();
+                    parser.paramsId.clear();
+               }
+              :}
+                 statements return_value:ret  SEMICOLON BRACK_RIGHT 
+              {: if(parser.control !=1){
+                 if(ret.equals("psps323ps")||ret.equals("pasalwlw323")||ret.equals("blalblablaba")||ret.equals("blalbla33blaba")){
+                    
+                     if(ret.equals("blalblablaba")){
+                       
+                         parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).setValor(parser.expression);
+                        
+                    }
+                    if(ret.equals("blalbla33blaba")){
+                       
+                        for(String i: parser.tipitos){
+                            if(i == tipo.toString()){
+                                parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).setValor(parser.expression);
+                            }
+                            else{
+                                Interfaz.error=1;
+                                Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR: Incompatibilidad de tipos de retorno, se esperaba: "+tipo.toString() +" ,se encontro: "+i+  ", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");
+                             }
+                        }
+                        
+                    }
+                    
+                     if(parser.tipito != tipo.toString()){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR: Incompatibilidad de tipos de retorno, se esperaba: "+tipo.toString() +" ,se encontro: "+parser.tipito+  ", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");
+                     }
+                     
+                    // parser.tipito ="";
+                     parser.paramsId.clear();
+                     parser.resetAmbito();
+                     parser.tipitos.clear();
+                }
+                else{
+                if(ret instanceof String[]){
+                String[] arreglo = (String[])ret;
+                parser.resetAmbito();
+                if(tipo.toString() == arreglo[1]){
+                parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(arreglo[0]);
+           
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipo de retorno se esperaba: "+tipo.toString() +" se encontro: "+arreglo[1] +", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");                                                      
+                  }
+               }
+               else{
+                if(parser.tablaSim.existeEnTabla(ret.toString(),parser.ambito)){
+                    if(tipo.toString() == parser.tablaSim.getlinea(ret.toString(),parser.ambito).getTipo().toString()){
+                        String s = parser.ambito; 
+                        parser.resetAmbito();
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(ret.toString(),s).getValor());
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipo de retorno se esperaba: "+tipo.toString() +" se encontro: "+parser.tablaSim.getlinea(ret.toString(),parser.ambito).getTipo().toString() +", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");                                                      
+                   }
+                }else{
+                     Interfaz.error=1;
+                     Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+ret.toString()+" Error En la linea: " +(retleft+1) + " en la columna: "+(retright+1)+"\n");               
+                 }
+               }
+              }
+              }else{
+                 parser.control =0;
+                 }
+              :}
+
+
+              |tipos:tipo ID:id PAR_LEFT PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }else{
+                    lineaTabla funcioncita=new lineaTabla(id.toString(),new functionType(null,(type)tipo),parser.ambito,"",0);
+                parser.id_par.add(new id_params(id.toString()));
+                parser.tablaSim.agregar(funcioncita);
+                }
+                parser.agregarAmbito(id.toString());
+                
+                }else{
+                    parser.control =1;
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede declararse una funcion dentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }  
+              :}
+                statements return_value:ret SEMICOLON BRACK_RIGHT
+              {: if(parser.control !=1){
+                if(ret.equals("psps323ps")||ret.equals("pasalwlw323")||ret.equals("blalblablaba")||ret.equals("blalbla33blaba")){
+                    
+                     if(ret.equals("blalblablaba")){
+                       
+                         parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).setValor(parser.expression);
+                        
+                    }
+                    if(ret.equals("blalbla33blaba")){
+                       
+                        for(String i: parser.tipitos){
+                           if(i == tipo.toString()){
+                                parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).setValor(parser.expression);
+                            }
+                            else{
+                                Interfaz.error=1;
+                                Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR: Incompatibilidad de tipos de retorno, se esperaba: "+tipo.toString() +" ,se encontro: "+i+  ", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");
+                             }
+                        }
+                        
+                    }
+                    
+                     if(parser.tipito != tipo.toString()){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR: Incompatibilidad de tipos de retorno, se esperaba: "+tipo.toString() +" ,se encontro: "+parser.tipito+  ", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");
+                     }
+                     
+                    // parser.tipito ="";
+                     parser.paramsId.clear();
+                     parser.resetAmbito();
+                     parser.tipitos.clear();
+                }else{
+                if(ret instanceof String[]){
+                String[] arreglo = (String[])ret;
+                parser.resetAmbito();
+                if(tipo.toString() == arreglo[1]){
+                parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(arreglo[0]);
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipo de retorno se esperaba: "+tipo.toString() +" se encontro: "+arreglo[1] +", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");                                                      
+                  }
+               }
+               else{
+                if(parser.tablaSim.existeEnTabla(ret.toString(),parser.ambito)){
+                    if(tipo.toString() == parser.tablaSim.getlinea(ret.toString(),parser.ambito).getTipo().toString()){
+                        String s = parser.ambito; 
+                        parser.resetAmbito();
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(ret.toString(),s).getValor());
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipo de retorno se esperaba: "+tipo.toString() +" se encontro: "+parser.tablaSim.getlinea(ret.toString(),parser.ambito).getTipo().toString() +", Error en la linea: "+(retleft+1) + " en la columna: "+(retright+1)+"\n");                                                      
+                   }
+                }else{
+                     Interfaz.error=1;
+                     Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+ret.toString()+" Error En la linea: " +(retleft+1) + " en la columna: "+(retright+1)+"\n");               
+                 }
+               }
+              }
+              }else{
+                 parser.control =0;
+                 }
+                
+              :}
+                
+           
+              |tipos:tipo ID:id ASSIGNATIONS literal_String :lit SEMICOLON
+                {:if(!parser.ambito.equals("inicio")){
+                  if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                     Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                   }else{
+                        if(tipo.toString() == "string"){
+                             String[] arreglo = (String[])lit;
+                            parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,arreglo[0]);
+                           // System.out.print("\n "+parser.tablaSim.getLineasTabla());
+                        }
+                        else{
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+tipo.toString() +" con String, Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");                               
+                        }
+                    }
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+                :} 
+
+
+              |tipos:tipo ID:id ASSIGNATIONS literal:lit SEMICOLON 
+               {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit;   
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+              }else{
+                    if(tipo.toString() == arreglo[1]){                   
+                    parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito, arreglo[0]);
+                 //System.out.print(parser.tablaSim.getLineasTabla()+ "\n");
+                    }else{
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+tipo.toString() +" con "+arreglo[1]+", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");                               
+                        }
+                    }
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}    
+         
+
+              |tipos:tipo ID:id ASSIGNATIONS ID:id1 SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }
+                if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){                 
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }else if(tipo.toString() == ((parser.tablaSim.getlinea(id1.toString(),parser.ambito)).getTipo()).toString()){
+                    parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,parser.tablaSim.getlinea(id1,parser.ambito).getValor());
+                   // System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                }   
+                else{
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+tipo.toString() +" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo()+  ", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+               }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :} 
+
+              
+              |tipos:tipo ID:id ASSIGNATIONS ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                Collections.reverse(parser.paramsId);
+                 int control1=0;
+                int control2=0;
+                 ArrayList<type> temp = new ArrayList<type>();
+                int contador =0;
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    control1=1;
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id.toString() +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }else{
+                    parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                }
+                if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito_inicial)){
+                control2=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }if(control1==0 && control2==0){ 
+                for(id_params i: parser.id_par){
+                        if(i.getId().equals( id1.toString())){
+                              if(i.getTipos() != null){
+                            temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                if(temp.size() !=0){
+               for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id1.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                      contador++;
+                    }
+                   }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               
+                    }
+                }
+                if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id1 +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                    }else{
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getValor().toString());
+                    }
+                    parser.paramsId.clear();
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+
+              |tipo_void:tipo ID:id PAR_LEFT lista_parametros PAR_RIGHT BRACK_LEFT 
+              {:if(parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }else{
+                    Collections.reverse(parser.parametros);
+                    type[] temp = new type[parser.parametros.size()];
+                    int contador =0;
+                    for(type i :parser.parametros){
+                        temp[contador] = i;
+                        contador++;
+                    }
+                    
+                    lineaTabla funcioncita=new lineaTabla(id.toString(),new functionType(parser.parametros,(type)tipo),parser.ambito,"",0);
+                    parser.id_par.add(new id_params(id.toString(),parser.parametros));
+                    parser.tablaSim.agregar(funcioncita);
+                    parser.agregarAmbito(id.toString());
+                    Collections.reverse(parser.paramsId);
+                    int cont =0;
+                    for(String i : parser.paramsId){
+                        if(parser.tablaSim.existeEnTabla(i.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+i +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                        }else{
+                            parser.tablaSim.agregar(i.toString(),temp[cont],parser.ambito,"");
+                            cont++;
+                        }
+                   }
+                }
+                parser.parametros.clear();
+                  parser.paramsId.clear();
+                  }else{
+                    parser.control =1;
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede declararse una funcion dentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    parser.parametros.clear();
+                  parser.paramsId.clear();
+               }
+              :}
+              statements BRACK_RIGHT
+               {:if(parser.control !=1){
+                 parser.resetAmbito();
+                }else{
+                 parser.control =0;
+                 }
+               :}
+
+
+              |tipos:tipo ID:id ASSIGNATIONS ID:id1 PAR_LEFT PAR_RIGHT SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                int control1=0;
+                int control2=0;
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                control1=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }
+                if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito_inicial)){                 
+                control2=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }
+                if(control1==0 && control2==0){ 
+                 if(tipo.toString() == parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                    parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getValor());
+                }else{
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+tipo.toString() +" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo()+  ", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+
+
+              |tipos:tipo ID:id SEMICOLON
+               {:if(!parser.ambito.equals("inicio")){
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                }
+                else{
+                    parser.tablaSim.agregar(id.toString(),(type)tipo, parser.ambito,"");
+                }
+                System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+              }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              
+              :}
+
+              |tipos:tipo ID:id lista_assig SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada.  Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }else{
+                         parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                    }
+                    for(String i : parser.lista){
+                    if(parser.tablaSim.existeEnTabla(i.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+i +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }else{
+                        parser.tablaSim.agregar(i.toString(),(type)tipo,parser.ambito,"");
+                       // System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                    }
+                 }
+                 parser.lista.clear();
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+              
+              
+              |ID:id ASSIGNATIONS ID:id1 PAR_LEFT PAR_RIGHT SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+               if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito_inicial)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }else if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                    parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getValor());
+                }
+                else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad en la asignacion,  "+parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString()+" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()+"Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                
+                }
+                
+               }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+
+              |ID:id PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON    
+              {:if(!parser.ambito.equals("inicio")){
+                 Collections.reverse(parser.paramsId);
+                 ArrayList<type> temp = new ArrayList<type>();
+                int contador =0;
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                else{
+                    for(id_params i: parser.id_par){
+                        if(i.getId().equals( id.toString())){
+                            if(i.getTipos() != null){
+                             temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                   if(temp.size()!= 0){
+                   for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                   // System.out.print("\nid1 "+i.getId()+ " id2 "+ id.toString()+" tipo1 "+i.getTipos()+" tipo2 "+ parser.paramsId);
+                      contador++;
+                      
+                    }
+                   }
+                   if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                  }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               
+                  }
+                }
+                parser.paramsId.clear();
+              }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+
+              :}
+              
+              
+              
+              |ID:id ASSIGNATIONS ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                Collections.reverse(parser.paramsId);
+                ArrayList<type> temp = new ArrayList<type>();
+                int contador =0;
+                int control1=0;
+                int control2=0;
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                control1=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito_inicial)){
+                control2=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }else if(control1==0&& control2==0){
+                for(id_params i: parser.id_par){
+                        if(i.getId().equals( id1.toString())){
+                             if(i.getTipos() != null){
+                              temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                 if(temp.size()!= 0){
+                 for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id1.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                      contador++;
+                    }
+                   }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               
+                    }
+
+                }
+                if (contador==0){
+                    if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString()!=parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                         Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad en la asignacion,  "+parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString()+" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()+". Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");                
+                    }else{
+                      Interfaz.error=1;
+                     Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id1 +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                     }
+                }else{
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getValor().toString());
+                    }
+                    parser.paramsId.clear();
+                    
+                    }
+                    
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+
+
+              |ID:id ASSIGNATIONS ID:id1 SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                int control1=0;
+                int control2=0;
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                control1=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+               if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                control2=1;
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }
+                if(control1==0 && control2==0){
+                if((parser.tablaSim.getlinea(id1.toString(),parser.ambito)).getValor() == ""){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha asignado valor a la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                }                
+                if(((parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo()).toString()) != (parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo().toString())){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo() +" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo()+  " Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n"));
+                
+                }else{
+                        (parser.tablaSim.getlinea(id.toString(),parser.ambito)).setValor(parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor());
+                        //System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                }
+                }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+                           
+              |ID:id ASSIGNATIONS literal_String:st_lit SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){ 
+                if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){  
+                     String[] arreglo = (String[])st_lit;
+                        if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == arreglo[1]){
+                            parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(arreglo[0]);
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo() +" con String, Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n"));                
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                 }
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+
+              |ID:id ASSIGNATIONS literal:lit SEMICOLON
+              {:if(!parser.ambito.equals("inicio")){
+                 if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){  
+                 String[] arreglo = (String[])lit;
+                    if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == arreglo[1]){
+                       parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(arreglo[0]);
+                       // System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                     }else{
+                       Interfaz.error=1;
+                       Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la asignacion "+(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo()+" con "+arreglo[1] +", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n"));                
+                     }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+              :}
+              |incremento SEMICOLON:semi 
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }                
+              :}
+             
+              |op_aritmeticas SEMICOLON:semi
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }                
+              :}
+              |PRINTF PAR_LEFT literal_String  lista_assig2 PAR_RIGHT SEMICOLON :semi
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }                
+              :}
+              |PRINTF PAR_LEFT literal_String   PAR_RIGHT SEMICOLON:semi
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }                
+              :}
+              |PRINTF PAR_LEFT ID:id PAR_RIGHT SEMICOLON:semi
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }else{
+                 if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){ 
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }
+              }
+              :}
+              |SCANF PAR_LEFT literal_String  lista_assig3  PAR_RIGHT SEMICOLON:semi
+              {:if(parser.ambito.equals("inicio")){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(semileft+1) + " en la columna: "+(semiright+1)+"\n");
+              }                
+              :}
+              ;
+
+elseif_stment ::=ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT elseif_stment
+                |ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT
+                ;
+
+literal ::= INT_LITERAL:il{: String[] array = new String[2];
+                            array[1] = "integer";
+                            array[0] = il.toString();
+                            RESULT = array;
+                          :}
+           |CHAR_LITERAL:cl{: String[] array = new String[2];
+                            array[1] = "char";
+                            array[0] = cl.toString();
+                            RESULT = array;
+                          :}
+           |FLOAT_LITERAL:fl{: String[] array = new String[2];
+                            array[1] = "float";
+                            array[0] = fl.toString();
+                            RESULT = array;
+                          :}
+            
+        ;
+
+literal_String ::=STRING_LITERAL:sl{: String[] array = new String[2];
+                                    array[1] = "string";
+                                    array[0] = sl.toString();
+                                    RESULT = array;
+                                  :}
+                ;
+
+tipos::= INT {:RESULT = new integerType();:}
+        |CHAR{:RESULT = new charType();:}
+        |STRING{:RESULT = new stringType();:}
+        |FLOAT{:RESULT = new floatType();:}
+        ;
+tipo_void ::= VOID{:RESULT = new voidType();:}
+            ;
+
+asig_or_and ::= assignaciones
+                |assignaciones OR  asig_or_and 
+                |assignaciones AND asig_or_and 
+                ;
+
+lista_assig::= COMMA ID:id lista_assig{:parser.lista.add(id.toString());:}
+              |COMMA ID:id{:parser.lista.add(id.toString());:}
+              |error {:Interfaz.salida.setText(Interfaz.salida.getText() +"ERROR en el lista asignacion"+"\n");:}
+              ;
+
+lista_assig2 ::=COMMA ID:id
+                {:if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){ 
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }
+                :}
+               |COMMA ID:id lista_assig2
+               {:if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){ 
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }:}
+               |COMMA literal
+               |COMMA literal lista_assig2
+               |COMMA literal_String 
+               |COMMA literal_String  lista_assig2
+               |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR en la LISTA2 " +"\n");:}
+                ;
+lista_assig3 ::=COMMA AMPERSAND ID:id{:if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){ 
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   } RESULT= id;:} 
+                |COMMA AMPERSAND ID:id  lista_assig3{:if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){ 
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   } RESULT= id;:}
+                ;
+
+
+inicial ::= tipos:tipo ID:id ASSIGNATIONS literal:lit
+            {: if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada.  Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+             }else{
+                String[] arreglo = (String[])lit;
+                parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,arreglo[0]);
+                RESULT= arreglo[0];
+             }
+            :}
+          |tipos:tipo ID:id ASSIGNATIONS literal_String:lit 
+            {: if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada.  Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+             }else{
+                String[] arreglo = (String[])lit;
+                parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,arreglo[0]);
+                RESULT= arreglo[0];
+             }
+            :}
+          |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR en la inicializaciones " +"\n");:}
+          ;
+
+incremento ::= ID:id INCREMENTADORES:inc
+              {: int numero;
+               if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+              else{
+                    if(inc == "++"){
+                    numero=Integer.parseInt(parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor()) + 1;
+                    parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(Integer.toString(numero)); 
+                    RESULT = Integer.toString(numero);
+                    }else{
+                        numero=Integer.parseInt(parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor()) -1;
+                    parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(Integer.toString(numero)); 
+                    RESULT = Integer.toString(numero);
+                    }
+                  }
+                 
+              :}
+             |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"ERROR en los incrementadores " +"\n");:}
+             ;
+
+assignaciones ::= ID:id OPERADORES literal:lit
+                   {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit;
+                        if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                         }else
+                         if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() != arreglo[1]){
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la comparacion "+parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo()+" con "+arreglo[1] +", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");                
+                    
+                        }
+                        RESULT = arreglo[0];
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                   :}
+
+
+                |ID:id OPERADORES literal_String :lit
+                {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit;
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }else
+                    if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() != arreglo[1]){
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la comparacion "+parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo()+" con "+arreglo[1] +", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");                
+                    
+                        }
+                    }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+                   :}
+                | ID:id OPERADORES ID:id1  
+                {:if(!parser.ambito.equals("inicio")){
+                   if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }
+                   if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                   }else
+                   if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() != parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo().toString()){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en la comparacion "+parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo()+" con "+parser.tablaSim.getlinea(id1.toString(),parser.ambito).getTipo()+", Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");                
+                    
+                   }
+                 }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+                :}
+                   
+                | ID:id OPERADORES ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT
+                {:if(!parser.ambito.equals("inicio")){
+                  Collections.reverse(parser.paramsId);
+                  ArrayList<type> temp = new ArrayList<type>();
+                  int contador =0;
+                  if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }
+                  if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                   }else{
+                    
+                   for(id_params i: parser.id_par){
+                        if(i.getId().equals( id1.toString())){
+                             if(i.getTipos() != null){
+                                temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                    if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString() == parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getTipo().toString()){
+                         if(temp.size()!= 0){
+                        for(id_params i: parser.id_par){
+                          if((i.getId().toString().equals( id1.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                             contador++;
+                           }
+                          }
+                        }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+
+                         }
+                    }
+                    if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id1 +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                    }else{
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(parser.tablaSim.getlinea(id1.toString(),parser.ambito_inicial).getValor().toString());
+                    }
+                    parser.paramsId.clear();
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+               :} 
+                |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"Error en las asignaciones" +"\n");:}
+                ;
+
+lista_parametros ::= tipos:tipo ID:id COMMA lista_parametros{:String[] array = new String[1];
+                                                              array[0] = tipo.toString();
+                                                              parser.paramsId.add(id.toString());
+                                                              parser.parametros.add((type)tipo);
+                                                              
+                                                            :}
+                  |tipos:tipo ID:id {:String[] array = new String[1];
+                                      array[0] = tipo.toString();
+                                      parser.paramsId.add(id.toString());
+                                       parser.parametros.add((type)tipo);
+                                     :}
+                  |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"Error en los parametros 1" +"\n");:}
+                  ;
+
+lista_parametros2 ::= ID:id COMMA lista_parametros2{:if((!parser.ambito.equals("inicio"))&& parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                                                    parser.paramsId.add(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString());
+                                                     if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor().toString() == ""){
+                                                      Interfaz.error=1;
+                                                      Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha asignado valor a la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                                                      
+                                                    }
+                                                   }else{
+                                                      Interfaz.error=1;
+                                                      Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+", Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                                                    }
+                                                   
+                                                    
+                                                 :}
+                    |ID:id{:if((!parser.ambito.equals("inicio"))&& parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                            parser.paramsId.add(parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString());
+                            if(parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor().toString() == ""){
+                                Interfaz.error=1;
+                                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha asignado valor a la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                                                   
+                            }
+                            }else{
+                                                      Interfaz.error=1;
+                                                      Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                                                    }
+                           :}
+                    |literal:lit COMMA lista_parametros2{:if(!parser.ambito.equals("inicio")){
+                                                        String[] arreglo = (String[])lit;
+                                                        parser.paramsId.add(arreglo[1]);
+                                                        }
+                                                      :}
+                    |literal:lit {:if(!parser.ambito.equals("inicio")){
+                                        String[] arreglo = (String[])lit;
+                                                        parser.paramsId.add(arreglo[1]);
+                                                        }
+                                                      :}
+                    |literal_String:lit  COMMA lista_parametros2{:if(!parser.ambito.equals("inicio")){
+                                                        String[] arreglo = (String[])lit;
+                                                        parser.paramsId.add(arreglo[1]);
+                                                        }
+                                                      :}
+                    |literal_String:lit {:if(!parser.ambito.equals("inicio")){
+                                            String[] arreglo = (String[])lit;
+                                                         parser.paramsId.add(arreglo[1]);
+                                                         }
+                                                      :}
+                    |error{:Interfaz.salida.setText(Interfaz.salida.getText()+"Error en los parametros 2" +"\n");:}
+                    ;
+                  
+
+return_value ::= RETURN literal_String :st_lit{:RESULT = st_lit;:}
+                |RETURN literal :lit{:RESULT = lit;:}
+                |RETURN ID:id{:RESULT = id.toString();:}
+                |RETURN ID:id PAR_LEFT PAR_RIGHT operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{
+                        String temp = parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).getValor() +op + op_a;
+                        parser.expression = temp;
+                        parser.tipito = parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).getTipo().toString();
+                        parser.tipitos.add(parser.tipito);
+                        RESULT = "blalbla33blaba";
+                    }
+                 }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }  
+                :}
+                |RETURN ID:id operaciones:op op_aritmeticas:op_a 
+                {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{ 
+                    String temp = parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor() +op + op_a;
+                    System.out.print("\nid= "+id.toString() + temp);
+                    parser.expression = temp;
+                    parser.tipito = parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString();
+                    parser.tipitos.add(parser.tipito);
+                    RESULT = "blalbla33blaba";
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                |RETURN literal:lit operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit; 
+                     if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                     parser.expression =arreglo[0] + op + op_a;
+                     parser.tipito = arreglo[1];
+                    // parser.tipitos.add(parser.tipito);
+                    RESULT = "blalblablaba";
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(opleft+1) + " en la columna: "+(opright+1)+"\n");
+                   }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(litleft+1) + " en la columna: "+(litright+1)+"\n");
+                    }
+                 :}
+                |RETURN ID:id PAR_LEFT PAR_RIGHT
+                {:if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                 }
+                 if(parser.tablaSim.getlinea(id.toString(), parser.ambito_inicial).getTipo().toString() == "void"){
+                     Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No puede mandarse como valor de retorno una funcion de tipo: void."+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                
+                 }else{
+                  parser.tipito = (parser.tablaSim.getlinea(id.toString(), parser.ambito_inicial).getTipo().toString());
+                  parser.tipitos.add(parser.tipito);
+                 }
+                  System.out.print(parser.tablaSim.getLineasTabla()+"\n ");
+                 RESULT = "pasalwlw323";
+                :}
+                |RETURN ID:id PAR_LEFT lista_parametros2:par PAR_RIGHT operaciones:op op_aritmeticas:op_a
+                {:if(!parser.ambito.equals("inicio")){
+                 Collections.reverse(parser.paramsId);
+                 ArrayList<type> temp = new ArrayList<type>();
+                int contador =0;
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                RESULT = "lLl";
+                }
+                else{
+                    for(id_params i: parser.id_par){
+                        if(i.getId().equals( id.toString())){
+                            if(i.getTipos() != null){
+                            temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                    System.out.print("\ntemp"+temp.size());
+                    if(temp.size()!= 0){
+                   for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                      contador++;
+                      
+                    }
+                   }
+                   if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               
+                }
+                 parser.tipito = (parser.tablaSim.getlinea(id.toString(), parser.ambito_inicial).getTipo().toString());
+                parser.tipitos.add(parser.tipito);
+                String temp1 = parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor() +op + op_a;
+                parser.expression = temp1;
+                 parser.paramsId.clear();
+                }
+               
+              }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+               parser.paramsId.clear();
+                RESULT ="psps323ps";
+                :}
+                |RETURN ID:id PAR_LEFT lista_parametros2:par PAR_RIGHT
+                {:if(!parser.ambito.equals("inicio")){
+                 Collections.reverse(parser.paramsId);
+                 ArrayList<type> temp = new ArrayList<type>();
+                int contador =0;
+                if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                Interfaz.error=1;
+                Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                }
+                else{
+                    for(id_params i: parser.id_par){
+                        if(i.getId().equals( id.toString())){
+                            if(i.getTipos() != null){
+                            temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                    System.out.print("\ntemp"+temp.size());
+                    if(temp.size()!= 0){
+                   for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                      contador++;
+                      
+                    }
+                   }
+                   if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               
+                }
+                parser.paramsId.clear();
+                parser.tipito = (parser.tablaSim.getlinea(id.toString(), parser.ambito_inicial).getTipo().toString());
+                parser.tipitos.add(parser.tipito);
+                }
+                
+                parser.paramsId.clear();
+
+                
+              }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+               
+                RESULT ="psps323ps";
+                :}
+                ;
+
+operaciones::= MINUS {:RESULT = "-";:}
+                |PLUS{:RESULT = "+";:}
+                |MULT{:RESULT = "*";:}
+                |DIV{:RESULT = "/";:}
+             ;
+
+op_aritmeticas ::= tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op op_aritmeticas:op_a
+                    {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit;  
+                    if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }
+                     else{
+                        parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                        String temp = arreglo[0] + op+ op_a;
+                        System.out.print("\nid ="+id.toString()+temp);
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                        RESULT =temp;
+                     }
+                     }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                     }
+                     }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                   :}
+                 |tipos:tipo ID:id ASSIGNATIONS:asig ID:id1 operaciones:op op_aritmeticas:op_a
+                  {:if(!parser.ambito.equals("inicio")){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }
+                     if(parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor());
+                        }else{
+                            Interfaz.error=1;
+                            Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                        }
+                        if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)&&parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        String temp = parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor();
+                        String temp2 = temp + op + op_a;
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp2);
+                        System.out.print("\nid= "+id.toString()+temp2);
+                        RESULT = temp2;
+                        }
+                        }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                   :}
+                 |ID:id ASSIGNATIONS:asig ID:id1 operaciones:op op_aritmeticas:op_a
+                   {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                    if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id1.toString()+" Error En la linea: " +(id1left+1) + " en la columna: "+(id1right+1)+"\n");
+                    }
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)&&parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                    String temp2 = parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor();
+                    String temp =temp2+op+op_a;
+                    parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                    System.out.print("\nid= "+id.toString()+temp);
+                    RESULT = temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                 
+                :}
+                 
+                 |ID:id ASSIGNATIONS:asig literal:lit operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit; 
+                    if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{ 
+                    String temp = arreglo[0] + op +op_a;
+                    parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                    System.out.print("\nid= "+id.toString()+temp);
+                    RESULT =temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                
+                 |ID:id operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{ 
+                    String temp = parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor() +op + op_a;
+                    System.out.print("\nid= "+id.toString() + temp);
+                     parser.tipito = parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString();
+                    parser.tipitos.add(parser.tipito);
+                    RESULT = temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+
+                 |ID:id PAR_LEFT PAR_RIGHT operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{
+                    String temp = parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).getValor() +op+ op_a;
+                    System.out.print("\nid= "+id.toString() + temp);
+                    RESULT = temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                 |ID:id PAR_LEFT PAR_RIGHT
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{ 
+                    String temp = parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).getValor();
+                    System.out.print("\nid= "+id.toString() + temp);
+                    RESULT = temp;
+                    }
+                  }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                 |ID:id PAR_LEFT lista_parametros2 PAR_RIGHT operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    
+                   Collections.reverse(parser.paramsId);
+                   ArrayList<type> temp = new ArrayList<type>();
+                   int contador =0;
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito_inicial)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                     else{
+                    for(id_params i: parser.id_par){
+                        if(i.getId().equals( id.toString())){
+                            if(i.getTipos() != null){
+                            temp.addAll(i.getTipos());
+                            }
+                        }
+                    }
+                    System.out.print("\ntemp"+temp.size());
+                    if(temp.size()!= 0){
+                   for(id_params i: parser.id_par){
+                   if((i.getId().toString().equals( id.toString()) && i.getTipos().toString().equals(parser.paramsId.toString()))){
+                      contador++;
+                    }
+                   }
+                   if (contador==0){
+                      Interfaz.error=1;
+                      Interfaz.salida.setText(Interfaz.salida.getText()+"Incompatibilidad de tipos en el envio de los parametros en la funcion: "+id +", se esperaba: "+temp.toString()+" Se encontro: "+parser.paramsId+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"La funcion: "+id.toString()+"() no recibe ningun parametro . Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");              
+                }
+                 parser.tipito = (parser.tablaSim.getlinea(id.toString(), parser.ambito_inicial).getTipo().toString());
+                parser.tipitos.add(parser.tipito);
+                parser.paramsId.clear();
+               String  temp2 = parser.tablaSim.getlinea(id.toString(),parser.ambito_inicial).getValor();
+                 RESULT = temp2;
+                }
+               
+                    
+                    
+                
+              }else{
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+               }
+                   
+                :}
+                 |ID:id 
+                   {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    } else{
+                     parser.tipito = parser.tablaSim.getlinea(id.toString(),parser.ambito).getTipo().toString();
+                    parser.tipitos.add(parser.tipito);
+                    RESULT = parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor();
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                                  
+                 |literal:lit operaciones:op op_aritmeticas:op_a
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit; 
+                     if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    RESULT = arreglo[0] + op + op_a;
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(opleft+1) + " en la columna: "+(opright+1)+"\n");
+                   }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(litleft+1) + " en la columna: "+(litright+1)+"\n");
+                    }
+                 :}
+                 |literal:lit
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit; 
+                     if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    RESULT = arreglo[0];
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(litleft+1) + " en la columna: "+(litright+1)+"\n");
+                   }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(litleft+1) + " en la columna: "+(litright+1)+"\n");
+                    }
+                 :}
+                 
+                 |PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit;  
+                    if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    String temp = pl +arreglo[0]+ op+op_a +pr + op2 +op_a2;
+                    System.out.print("\ntemp="+  temp);
+                    RESULT = temp;
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                   }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                    }
+                 :}
+                 |PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr 
+                  {:if(!parser.ambito.equals("inicio")){
+                   String[] arreglo = (String[])lit;  
+                   if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                   String temp = pl + arreglo[0] +op + op_a +pr;
+                   System.out.print("\ntemp="+  temp);
+                   RESULT = temp;
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                   }
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                    }
+                 :}
+                 |PAR_LEFT:pl literal:lit PAR_RIGHT:pr operaciones:op op_aritmeticas:op_a
+                  {:if(!parser.ambito.equals("inicio")){
+                   String[] arreglo = (String[])lit; 
+                   if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                   String temp = pl + arreglo[0] + pr +op+ op_a;
+                   System.out.print("\ntemp="+  temp);
+                   RESULT =temp;
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                   }
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                    }
+                 :}
+                 |PAR_LEFT:pl literal:lit PAR_RIGHT:pr
+                 {:if(!parser.ambito.equals("inicio")){
+                   String[] arreglo = (String[])lit; 
+                   if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                   String temp = pl + arreglo[0] + pr;
+                   System.out.print("\ntemp="+  temp);
+                   RESULT =temp;
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                    
+                    }
+                   }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(plleft+1) + " en la columna: "+(plright+1)+"\n");
+                    }
+                 :}
+                 
+                 |PAR_LEFT:pl ID:id operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
+                  {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    } else{
+                    String temp2 = parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor();
+                    String temp = pl + temp2 +op + op_a +pr + op2 +op_a2;
+                    System.out.print("\ntemp="+  temp);
+                    RESULT =temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+                 |PAR_LEFT:pl ID:id operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr 
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(!parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                    Interfaz.error=1;
+                    Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }else{ 
+                    String temp2 =  parser.tablaSim.getlinea(id.toString(),parser.ambito).getValor();
+                    String temp = pl + temp2 + op+ op_a +pr;
+                    System.out.print("\ntemp="+  temp);                    
+                    RESULT =temp;
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                :}
+
+                 |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
+                 {:if(!parser.ambito.equals("inicio")){
+                        String[] arreglo = (String[])lit; 
+                    if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }else{
+                        String temp = pl + arreglo[0] + op +op_a +pr + op2 + op_a2; 
+                        parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                        System.out.print("\ntemp="+  temp);
+                        RESULT =temp;
+                     }
+                      }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                     RESULT = "0";
+                  :}
+                 |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr
+                 {:if(!parser.ambito.equals("inicio")){
+                    String[] arreglo = (String[])lit; 
+                    if(arreglo[1] == "integer" || arreglo[1] == "float"){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada. Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }
+                     else{
+                        String temp = pl + arreglo[0] + op + op_a +pr;
+                        parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                        parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                        System.out.print("\ntemp="+  temp);
+                        RESULT =temp;
+                     }
+                        RESULT = "0";
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se puede hacer la operacion con variable de tipo: "+arreglo[1]+". Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    
+                    }
+                    }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                  :}
+                 |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl ID:id1 operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
+                 {:if(!parser.ambito.equals("inicio")){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada.Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }else if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                   }else{ 
+                        if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)&&parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                            String temp = parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor();
+                            parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                            parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                            System.out.print("\ntemp="+  temp);
+                            RESULT =temp;
+                        }
+                        }
+                        }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                 :}
+                 |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl ID:id1 operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr
+                  {:if(!parser.ambito.equals("inicio")){
+                    if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)){
+                        Interfaz.error =1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"La variable "+id +" ya fue declarada.Error En la linea: "+(idleft+1)+" en la columna: "+(idright+1)+"\n");
+                    }else if(!parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No se ha declarado la variable: "+id.toString()+" Error En la linea: " +(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                     }else{
+                        if(parser.tablaSim.existeEnTabla(id.toString(),parser.ambito)&&parser.tablaSim.existeEnTabla(id1.toString(),parser.ambito)){
+                            String temp = parser.tablaSim.getlinea(id1.toString(),parser.ambito).getValor();
+                            parser.tablaSim.agregar(id.toString(),(type)tipo,parser.ambito,"");
+                            parser.tablaSim.getlinea(id.toString(),parser.ambito).setValor(temp);
+                            System.out.print("\ntemp="+  temp);
+                            RESULT =temp;
+                        }
+                        }
+                     }else{
+                        Interfaz.error=1;
+                        Interfaz.salida.setText(Interfaz.salida.getText()+"No pertenece a ninguna funcion, debe estar adentro de una funcion. Error en la linea: "+(idleft+1) + " en la columna: "+(idright+1)+"\n");
+                    }
+                  :}
+                 
+                 ;
+
+                

@@ -1,0 +1,22 @@
+void suma(){
+int suma = 0;
+
+	while(suma>=200){
+	for(int n = 0 ; n<10; n++){
+		//sdasdasdafsfafs%$^$%^$%
+		suma += n; 
+		printf(suma);
+	}	
+	String s = "este es un string";
+}
+funcion(parametro1, parametro2, parametro3);
+scanf("introduzca su numero",&numero);
+
+if(numero>suma){
+
+	printf("su numero: %d es mayor a la suma",numero);
+
+}else{
+	printf("su numero: %d es menor a la suma",numero);
+}
+}
