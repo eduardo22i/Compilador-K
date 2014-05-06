@@ -12,6 +12,8 @@ public String ambito = "inicio";
 tablaSimbolos tablaSim;
 public ArrayList<String> paramsId = new ArrayList<String>();
 
+
+
 public ArrayList<String> getLiterals(){
     
     return action_obj.mensajes;
@@ -36,10 +38,17 @@ tablaSimbolos tablaSim = Interfaz.tabla;
 TablaCuadruplos tablaCuad = new TablaCuadruplos();
 ArrayList<Cuadruplo> cuadruplos = new ArrayList<Cuadruplo>();
 ArrayList<String> mensajes=new ArrayList<String>();
-String etiqueta ="";
+
+public ArrayList<BackPatchLista> thisList = new ArrayList<BackPatchLista>();
+
+public ArrayList<Integer> ms = new ArrayList<Integer>();
+
+
 int temp_cont =0;
 int etq_cont =0;
 int sig_cuad =0;
+
+int inst=0;
 
 public void addMsg(String s){
 	mensajes.add(s);
@@ -75,6 +84,9 @@ public String temp_nuevo(){
 }
 public String etiq_nueva(){
     return "_etiq"+(etq_cont++);
+}
+public String etiq_nueva2(String str){
+    return "_etiq"+str;
 }
 public void completa(Lista lista,String etiq){
     Lista.completa(lista,etiq);
@@ -122,29 +134,49 @@ statements ::=statement statements
                 Interfaz.cuad = tablaCuad;
                 System.out.print("------------------------\n");
                  tablaCuad.PrintTablaCuad();
-            :}
+               //int val=  thisList.get(thisList.size()-1).listaverdadera.get(thisList.get(thisList.size()-1).listaverdadera.size()-1);
+
+                //ms.add(val);
+                
+             :}
             ;
 
             
 statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT 
-                {:gen("main","_main");
+                {:gen("Etiq","_main");
                   
                 //result mr =(result)m;
                 //result statr = (result)stat;
                 //result litr = (result)lit;
                // completa(statr.backpatch.siguiente,mr.valor.toString());
                // RESULT = new result(new BackPatch(litr.backpatch.siguiente));
-                :}
+                inst++; :}
                 statements:stat  RETURN literal:lit SEMICOLON BRACK_RIGHT
                {:result litr = (result)lit;
-                gen("_ret",litr.valor.toString());:}
+                gen("ret",litr.valor.toString());inst++; :}
               |IF:ifs PAR_LEFT asig_or_and:as  PAR_RIGHT BRACK_LEFT statements:stat   BRACK_RIGHT 
               {:result asr = (result)as;
                 //result mr = (result)m;
                // result nr = (result)n;
                 //gen("if ",asr.valor.toString()," GOTO"," ");
               //  gen("GOTO"," ");
-              :}
+                
+
+                int a = ms.get(ms.size()-1) ;
+
+              //JOptionPane.showMessageDialog(null, a+" -");
+               int val=  thisList.get(thisList.size()-1).listaverdadera.get(thisList.get(thisList.size()-1).listaverdadera.size()-1);
+                cuadruplos.get(val-1).setRes("GOTO_etiq"+a);
+                 gen("ETIQ","_etiq"+cuadruplos.size());
+                cuadruplos.get(val).setRes("_etiq"+(cuadruplos.size()-1)+ "");
+
+                //int val2=  thisList.get(thisList.size()-1).listafalsa.get(thisList.get(thisList.size()-1).listafalsa.size()-1);
+                //cuadruplos.get(val2).setRes("GOTO"+cuadruplos.size());
+                //thisList.remove(thisList.size()-1);
+                //ms.remove(ms.size()-1);
+
+                inst++;
+                 :}
                 
               |IF:ifs PAR_LEFT asig_or_and:as PAR_RIGHT BRACK_LEFT  statements  BRACK_RIGHT  ELSE BRACK_LEFT statements BRACK_RIGHT
                {:result asr = (result)as;
@@ -152,59 +184,55 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 //result nr = (result)n;
                 //gen("if ",asr.valor.toString()," GOTO"," ");
                 //gen("GOTO"," ");
-              :}   
+              inst++; :}   
               |IF:ifs PAR_LEFT asig_or_and:as PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT  ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT 
               {:result asr = (result)as;
                 //result mr = (result)m;
                 //result nr = (result)n;
                 //gen("if ",asr.valor.toString()," GOTO"," ");
                 //gen("GOTO"," ");
-              :}
+              inst++; :}
               |IF:ifs PAR_LEFT asig_or_and:as PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT  ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT elseif_stment 
               {:result asr = (result)as;
                 //result mr = (result)m;
                 //result nr = (result)n;
                 //gen("if ",asr.valor.toString()," GOTO"," ");
                 //gen("GOTO"," ");
-              :}
+              inst++; :}
               |IF:ifs PAR_LEFT asig_or_and:as PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT  ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT  ELSE BRACK_LEFT  statements BRACK_RIGHT 
               {:result asr = (result)as;
                 //result mr = (result)m;
                 //result nr = (result)n;
                 //gen("if",asr.valor.toString()," GOTO"," ");
                // gen("GOTO"," ");
-              :}
+              inst++; :}
               |IF:ifs PAR_LEFT asig_or_and:as PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT  ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT  statements BRACK_RIGHT elseif_stment  ELSE BRACK_LEFT  statements BRACK_RIGHT 
               {:result asr = (result)as;
                 //result mr = (result)m;
                 //result nr = (result)n;
                 //gen("if asr.valor.toString() "," GOTO"," ");
                 //gen("GOTO"," ");
-              :}
-              |FOR PAR_LEFT inicial:inicial SEMICOLON assignaciones:as SEMICOLON incremento:inc  PAR_RIGHT BRACK_LEFT    
+              inst++; :}
+              |FOR PAR_LEFT inicial:inicial SEMICOLON assignaciones:as SEMICOLON    incremento:inc  PAR_RIGHT BRACK_LEFT  
                 
-               {:/*result asr = (result)as;
+               {:result asr = (result)as;
                 String t1 = etiq_nueva();
-                etiqueta = t1;
                 gen("ETIQ",t1);
                 String t = etiq_nueva();
                  gen("if "+asr.valor.toString(),"GOTO","");
                  gen("GOTO", "");
                  result incr = (result)inc;
                  gen(incr.valor.toString(),"","1");
-                 gen("GOTO", t1);*/
-                 String t1 = etiq_nueva();
-                gen("Etiq",t1);
-               :}
-                statements  BRACK_RIGHT
-               {:gen("GOTO",etiqueta);:}
+                 gen("GOTO", t1);
+               inst++; :}
+                statements BRACK_RIGHT
               |WHILE:while2  PAR_LEFT asig_or_and:as PAR_RIGHT  BRACK_LEFT 
               {:result asr = (result)as;
                 String t = etiq_nueva();
-                gen("Etiq",t);
-                gen("if"+as.valor.toString(),"GOTO","");
-              //  gen("GOTO","");
-                :}
+                gen("ETIQ",t);
+                gen("if ",as.valor.toString(),"GOTO","");
+                gen("GOTO","");
+                inst++; :}
                 statements BRACK_RIGHT 
               |tipo_void:tipo ID:id PAR_LEFT PAR_RIGHT BRACK_LEFT      
               {:parser.agregarAmbito(id.toString());
@@ -213,9 +241,9 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                // result statr = (result)stat;
                 //completa(statr.backpatch.siguiente,mr.valor.toString());
                 //RESULT = new result(new BackPatch(mr.backpatch.siguiente));
-              :}       
+              inst++; :}       
                statements:stat  BRACK_RIGHT 
-              {:parser.resetAmbito();:}
+              {:parser.resetAmbito();inst++; :}
               |tipos:tipo ID:id PAR_LEFT lista_parametros PAR_RIGHT BRACK_LEFT   
               {:parser.agregarAmbito(id.toString());
                 gen("Etiq","_"+id.toString());
@@ -224,9 +252,9 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 //result retr = (result)ret;
                //completa(statr.backpatch.siguiente,mr.valor.toString());
               // RESULT =new result(new BackPatch(retr.backpatch.siguiente));
-              :}  
+              inst++; :}  
               statements:stat  return_value:ret  SEMICOLON BRACK_RIGHT    
-              {:parser.resetAmbito();:}
+              {:parser.resetAmbito();inst++; :}
               |tipos:tipo ID:id PAR_LEFT PAR_RIGHT BRACK_LEFT  
               {:parser.agregarAmbito(id.toString());
                 gen("Etiq","_"+id.toString());
@@ -237,7 +265,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
               //RESULT =new result(new BackPatch(retr.backpatch.siguiente));
               :}
               statements:stat  return_value:ret SEMICOLON BRACK_RIGHT
-              {:parser.resetAmbito();:}
+              {:parser.resetAmbito(); :}
               |tipos:tipo ID:id ASSIGNATIONS:asig literal_String :lit SEMICOLON
                {:   result idr = new result(id.toString());
                     result litr = (result)lit;
@@ -246,7 +274,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                     gen(asig,t, id.toString());
                     //tablaCuad.PrintTablaCuad();
                     RESULT = idr;
-               :}
+               inst++; :}
 
               |tipos:tipo ID:id ASSIGNATIONS:asig literal:lit SEMICOLON 
                {:result idr = new result(id.toString());
@@ -257,14 +285,14 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 // tablaCuad.PrintTablaCuad();
                  System.out.print("\n----------------\n");
                  RESULT = idr;
-              :}
+              inst++; :}
               |tipos:tipo ID:id ASSIGNATIONS:asig ID:id1 SEMICOLON
               {:
                 String t = temp_nuevo();
                 gen(asig,id1.toString(),"",t,parser.ambito);
                 gen(asig,t,id.toString());
                 RESULT = new result(id.toString());
-              :}
+              inst++; :}
 
               
               |tipos:tipo ID:id ASSIGNATIONS:asig ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON
@@ -279,7 +307,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
 
                     parser.paramsId.clear();
                    RESULT = new result(id.toString());
-              :}
+              inst++; :}
 
               |tipo_void:tipo ID:id PAR_LEFT lista_parametros PAR_RIGHT BRACK_LEFT 
               {:parser.agregarAmbito(id.toString());
@@ -288,9 +316,9 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                // result statr = (result)stat;
               // completa(statr.backpatch.siguiente,mr.valor.toString());
               // RESULT =new result(new BackPatch(mr.backpatch.siguiente));
-              :}
+              inst++; :}
               statements:stat  BRACK_RIGHT
-              {:parser.resetAmbito();:}
+              {:parser.resetAmbito();inst++; :}
               |tipos:tipo ID:id ASSIGNATIONS:asig ID:id1 PAR_LEFT PAR_RIGHT SEMICOLON
               {:
                 gen("call",id1.toString());
@@ -298,12 +326,12 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 gen("ret",t,"",parser.ambito);
                 gen(asig,t,id.toString());
                RESULT =new result(id.toString());
-              :}
+              inst++; :}
 
               |tipos:tipo ID:id SEMICOLON
                {:
                 
-               :}
+               inst++; :}
               |tipos:tipo ID:id lista_assig SEMICOLON
               
               |ID:id ASSIGNATIONS:asig ID:id1 PAR_LEFT PAR_RIGHT SEMICOLON
@@ -313,7 +341,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 gen(asig,"ret",t);
                 gen(asig,t,id.toString());
                 RESULT =new result(id.toString());
-              :}
+              inst++; :}
 
               |ID:id PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON    
               {:Collections.reverse(parser.paramsId);
@@ -324,7 +352,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                     
                     parser.paramsId.clear();
                     RESULT =new result(id.toString());
-              :}
+              inst++; :}
               
               |ID:id ASSIGNATIONS:asig ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT SEMICOLON
               {:Collections.reverse(parser.paramsId);
@@ -338,7 +366,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
 
                     parser.paramsId.clear();
                     RESULT =new result(id.toString());
-              :}
+              inst++; :}
 
               |ID:id ASSIGNATIONS:asig ID:id1 SEMICOLON
               {:
@@ -346,7 +374,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 gen(asig,id1.toString(),t);
                 gen(asig,t,id.toString());
                 RESULT =new result(id.toString());
-              :}
+              inst++; :}
                           
               |ID:id ASSIGNATIONS:asig literal_String:lit SEMICOLON
               {:result idr = new result(id.toString());
@@ -355,7 +383,7 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                  gen(asig,litr.valor.toString(),t);
                 gen(asig,t,id.toString());
                 RESULT = idr;
-              :}
+              inst++; :}
               |ID:id ASSIGNATIONS:asig literal:lit SEMICOLON
               {: result idr = new result(id.toString());
                 result litr = (result)lit;
@@ -364,22 +392,22 @@ statement ::= INT:linea MAIN PAR_LEFT PAR_RIGHT BRACK_LEFT
                 gen(asig,t,id.toString());
                 //tablaCuad.PrintTablaCuad();
                RESULT = idr;
-              :}  
+              inst++; :}  
                             
               |op_aritmeticas SEMICOLON
            
               |PRINTF:pr PAR_LEFT literal_String:lit  lista_assig2 PAR_RIGHT SEMICOLON 
               {:result litr = (result)lit;
-                gen("printf","","",litr.valor.toString(),parser.ambito);:}
+                gen("printf","","",litr.valor.toString(),parser.ambito);inst++; :}
               |PRINTF:pr PAR_LEFT literal_String:lit   PAR_RIGHT SEMICOLON
                {:result litr = (result)lit;
-                gen("printf","","",litr.valor.toString(),parser.ambito);:}
+                gen("printf","","",litr.valor.toString(),parser.ambito);inst++; :}
               |PRINTF:pr PAR_LEFT ID:id PAR_RIGHT SEMICOLON
-               {:gen("printf","","",id.toString(),parser.ambito);:}
+               {:gen("printf","","",id.toString(),parser.ambito);inst++; :}
               |SCANF:sc PAR_LEFT literal_String:lit  lista_assig3:lista  PAR_RIGHT SEMICOLON
               {:result litr = (result)lit;
                 result listar = (result)lista;
-               gen("scanf","","",listar.valor.toString(),parser.ambito);:}
+               gen("scanf","","",listar.valor.toString(),parser.ambito);inst++; :}
               ;
 
 elseif_stment ::=ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRACK_RIGHT elseif_stment
@@ -387,37 +415,39 @@ elseif_stment ::=ELSEIF PAR_LEFT asig_or_and PAR_RIGHT BRACK_LEFT statements BRA
                 ;
 
 literal ::= INT_LITERAL:il
-            {:  RESULT= new result((il.toString()),new integerType()); :}
+            {:  RESULT= new result((il.toString()),new integerType()); inst++; :}
            |CHAR_LITERAL:cl
-            {: 
+            {:addMsg(cl.toString()); 
              RESULT= new result((cl.toString()),new charType()); 
-            :}
+            inst++; :}
            |FLOAT_LITERAL:fl
-             {:  RESULT= new result((fl.toString()),new floatType()); :}
+             {:  RESULT= new result((fl.toString()),new floatType()); inst++; :}
             
         ;
 
 literal_String ::=STRING_LITERAL:sl
                   {: addMsg(sl.toString());
                      RESULT= new result((sl.toString()),new stringType()); 
-                  :}
+                  inst++; :}
                 ;
 
-tipos::= INT {:RESULT = new result("integer");:}
-        |CHAR{:RESULT = new result("char");:}
-        |STRING{:RESULT = new result("string");:}
-        |FLOAT{:RESULT = new result("float");:}
+tipos::= INT {:RESULT = new result("integer");inst++; :}
+        |CHAR{:RESULT = new result("char");inst++; :}
+        |STRING{:RESULT = new result("string");inst++; :}
+        |FLOAT{:RESULT = new result("float");inst++; :}
         ;
-tipo_void ::= VOID{:RESULT = new result("void");:}
+tipo_void ::= VOID{:RESULT = new result("void");inst++; :}
             ;
 
 asig_or_and ::= assignaciones:asig
                 {:
-                RESULT = new result(asig.valor.toString());:}
+                //int a = ms.get(ms.size()-1) + 1;
+                //gen("ETIQ",etiq_nueva2(a+""));
+                RESULT = new result(asig.valor.toString());inst++; :}
                 |assignaciones:asig OR  asig_or_and
-                {:RESULT = new result(asig.valor.toString());:}
+                {:RESULT = new result(asig.valor.toString());inst++; :}
                 |assignaciones:asig AND asig_or_and
-                {:RESULT = new result(asig.valor.toString());:}
+                {:RESULT = new result(asig.valor.toString());inst++; :}
                 ;
 
 lista_assig::= COMMA ID:id lista_assig
@@ -434,61 +464,67 @@ lista_assig2 ::=COMMA ID
               
                 ;
 lista_assig3 ::=COMMA AMPERSAND ID:id
-                {:RESULT = new result(id.toString());:}
+                {:RESULT = new result(id.toString());inst++; :}
                 |COMMA AMPERSAND ID:id  lista_assig3
                 ;
 
 
 inicial ::= tipos:tipo ID:id ASSIGNATIONS literal:lit
             {:result litr = (result)lit;
-               String s = etiq_nueva();
               gen("=",litr.valor.toString(),id.toString());
-              gen("Etiq",s);
-            :}
+              gen("Etiq","");
+            inst++; :}
             
           |tipos:tipo ID:id ASSIGNATIONS literal_String:lit 
            {:result litr = (result)lit;
-           String s = etiq_nueva();
               gen("=",litr.valor.toString(),id.toString());
-              gen("Etiq",s);
-            :}
+              gen("Etiq","");
+            inst++; :}
           ;
 
 incremento ::= ID:id INCREMENTADORES:inc
-                {:gen(inc.toString(),"1",id.toString());
-                RESULT = new result(inc.toString()); :}
+                {:RESULT = new result(inc.toString()); inst++; :}
              
              ;
 
 assignaciones ::= ID:id OPERADORES:op literal:lit
                 {:result litr = (result)lit;
-                 gen("if"+op.toString(),id.toString(),litr.valor.toString(),"");
-                 gen("GOTO","");
-                 gen("Etiq", etiqueta);
+                   inst++; 
+                    //inst++;
+                  //Generación
+                 gen("if"+op.toString(),id.toString(),litr.valor.toString(), " ");
+                 gen("GOTO"," ");
+                gen("ETIQ", etiq_nueva2((ms.size() + 1 )+""));
+                ms.add(ms.size() + 1);
+                  BackPatchLista thisline =new BackPatchLista();
+                   thisline.listaverdadera.add(cuadruplos.size()-2);
+                   thisline.listafalsa.add(cuadruplos.size() -1);
+
+                  thisList.add(thisline);
+                 //BackPatch b new BackPatch();
+                //cuadruplos.get(2).setRes("GOTO"+(inst+1));
                 String t = id.toString()+op.toString()  +litr.valor.toString(); 
-                RESULT= new result(t);:}
+                RESULT= new result(t);
+                :}
                 |ID:id OPERADORES:op literal_String :lit
                 {:
                 result litr = (result)lit;
                  gen("if"+op.toString(),id.toString(),litr.valor.toString(),"");
                  gen("GOTO","");
-                 gen("Etiq",etiqueta);
                String t = id.toString()+op.toString()  +litr.valor.toString(); 
-                RESULT= new result(t);:}
+                RESULT= new result(t);inst++; :}
                 | ID:id OPERADORES:op ID:id1  
                 {: gen("if"+op.toString(),id.toString(),id1.toString(),"");
                  gen("GOTO","");
-                 gen("Etiq",etiqueta);
                String t = id.toString()+op.toString()  +id1.toString(); 
-                RESULT= new result(t);:}                
+                RESULT= new result(t);inst++; :}                
                 | ID:id OPERADORES:op ID:id1 PAR_LEFT lista_parametros2 PAR_RIGHT
                 {: gen("if"+op.toString(),id.toString(),id1.toString(),"");
                  gen("GOTO","");
-                 gen("Etiq",etiqueta);
                   String t = id.toString()+op.toString()  +id1.toString(); 
                   parser.paramsId.clear();
                   RESULT= new result(t);   
-                :}
+                inst++; :}
                 
                 ;
 
@@ -497,20 +533,20 @@ lista_parametros ::= tipos:tipo ID:id COMMA lista_parametros
                   
                   ;
 
-lista_parametros2 ::= ID:id COMMA lista_parametros2{:parser.paramsId.add(id.toString());:}
-                    |ID:id{: parser.paramsId.add(id.toString());:}
+lista_parametros2 ::= ID:id COMMA lista_parametros2{:parser.paramsId.add(id.toString());inst++; :}
+                    |ID:id{: parser.paramsId.add(id.toString());inst++; :}
                     |literal:lit COMMA lista_parametros2
                     {:result litr =(result)lit;
-                      parser.paramsId.add(litr.valor.toString()); :}
+                      parser.paramsId.add(litr.valor.toString()); inst++; :}
                     |literal:lit 
                     {:result litr =(result)lit;
-                      parser.paramsId.add(litr.valor.toString()); :}
+                      parser.paramsId.add(litr.valor.toString()); inst++; :}
                     |literal_String:lit  COMMA lista_parametros2
                     {:result litr =(result)lit;
-                      parser.paramsId.add(litr.valor.toString()); :}
+                      parser.paramsId.add(litr.valor.toString()); inst++; :}
                     |literal_String:lit 
                     {:result litr =(result)lit;
-                      parser.paramsId.add(litr.valor.toString()); :}
+                      parser.paramsId.add(litr.valor.toString()); inst++; :}
                    
                     ;
 
@@ -518,34 +554,34 @@ return_value ::= RETURN literal_String :st_lit
                 {:result litr =(result)st_lit;
                      // parser.paramsId.add(litr.valor.toString()); 
                       gen("ret",litr.valor.toString());
-                RESULT = litr;:}
+                RESULT = litr;inst++; :}
                 |RETURN literal :lit
                 {:result litr =(result)lit;
                       //parser.paramsId.add(litr.valor.toString()); 
                       gen("ret",litr.valor.toString());
-                RESULT = litr;:}
+                RESULT = litr;inst++; :}
                 |RETURN ID:id operaciones:op op_aritmeticas:op_a 
                 {:result opr = (result)op;
                   result op_ar =(result)op_a;
-                gen("ret",id.toString());:}
+                gen("ret",id.toString());inst++; :}
                 |RETURN literal:lit operaciones:op op_aritmeticas:op_a
                 {:result litr =(result)lit;
                       //parser.paramsId.add(litr.valor.toString()); 
                       gen("ret",litr.valor.toString());
-                :}
+                inst++; :}
                 |RETURN ID:id
                 {:gen("ret",id.toString());
-                RESULT = new result(id.toString());:}
+                RESULT = new result(id.toString());inst++; :}
                 |RETURN ID:id PAR_LEFT lista_parametros2:par PAR_RIGHT
                 {:gen("ret",id.toString());
                 parser.paramsId.clear();
-                RESULT= new result(id.toString());:}
+                RESULT= new result(id.toString());inst++; :}
                 |RETURN ID:id PAR_LEFT PAR_RIGHT
                 ;
-operaciones::= MINUS:op{:RESULT =new result(op.toString());:}
-                |PLUS:op{:RESULT =new result(op.toString());:}
-                |MULT:op{:RESULT =new result(op.toString());:}
-                |DIV:op{:RESULT =new result(op.toString());:}
+operaciones::= MINUS:op{:RESULT =new result(op.toString());inst++; :}
+                |PLUS:op{:RESULT =new result(op.toString());inst++; :}
+                |MULT:op{:RESULT =new result(op.toString());inst++; :}
+                |DIV:op{:RESULT =new result(op.toString());inst++; :}
              ;
 
 op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op op_aritmeticas:op_a
@@ -556,21 +592,21 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                     //gen(asig,op_ar.valor.toString(),t,"",parser.ambito);
                     gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                     gen(asig,t,id.toString());
-                   :} 
+                   inst++; :} 
                  |tipos:tipo ID:id ASSIGNATIONS:asig ID:id1 operaciones:op op_aritmeticas:op_a
                   {:result opr = (result)op;
                     result op_ar=(result)op_a;
                     String t = temp_nuevo();
                     gen(opr.valor.toString(),id1.toString(),op_ar.valor.toString(),t,parser.ambito);
                     gen(asig,t,id.toString());
-                   :}
+                   inst++; :}
                  |ID:id ASSIGNATIONS:asig ID:id1 operaciones:op op_aritmeticas:op_a
                   {:result opr = (result)op;
                     result op_ar=(result)op_a;
                     String t = temp_nuevo();
                     gen(opr.valor.toString(),id1.toString(),op_ar.valor.toString(),t);
                     gen(asig,t,id.toString());
-                  :}
+                  inst++; :}
                 
                    
                  |ID:id ASSIGNATIONS:asig literal:lit operaciones:op op_aritmeticas:op_a
@@ -580,14 +616,14 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    String t = temp_nuevo();
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                    gen(asig,t,id.toString());
-                 :}  
+                 inst++; :}  
                  |ID:id operaciones:op op_aritmeticas:op_a
                  {:result opr = (result)op;
                    result op_ar=(result)op_a;
                    String t = temp_nuevo();
                    gen(opr.valor.toString(),id.toString(),op_ar.valor.toString(),t);
                    RESULT = new result(t);
-                 :}                
+                 inst++; :}                
 
                  |ID:id PAR_LEFT PAR_RIGHT operaciones:op op_aritmeticas:op_a
                  {:result opr = (result)op;
@@ -598,14 +634,14 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen("=","ret",t2);
                    gen(opr.valor.toString(),t2,op_ar.valor.toString(),t); 
                    RESULT = new result(t);
-                :}
+                inst++; :}
                  |ID:id PAR_LEFT PAR_RIGHT
                  {:String t = temp_nuevo();
                     gen("call",id.toString());
                     gen("ret",t);
                     RESULT = new result(t);
                     
-                :}
+                inst++; :}
                 
                  |ID:id PAR_LEFT lista_parametros2 PAR_RIGHT operaciones:op op_aritmeticas:op_a
                  {:Collections.reverse(parser.paramsId);
@@ -621,9 +657,9 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                     gen("=","ret",t);
                     gen(opr.valor.toString(),t,op_ar.valor.toString(),t2);
                     RESULT =new result(t2);
-              :}
+              inst++; :}
                  |ID:id 
-                 {:RESULT= new result(id.toString());:}
+                 {:RESULT= new result(id.toString());inst++; :}
                                
                  |literal:lit operaciones:op op_aritmeticas:op_a
                  {:result litr = (result)lit;
@@ -633,11 +669,11 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    //gen("=",op_ar.valor.toString(),t);
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                    RESULT = new result(t);
-                 :}
+                 inst++; :}
                  |literal:lit
                  {:result litr = (result)lit;
                    RESULT = litr;
-                  :}
+                  inst++; :}
                                   
                  
                  |PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
@@ -651,7 +687,7 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                    gen(opr2.valor.toString(),t,op_ar2.valor.toString(),t2);
                    RESULT = new result(t2);
-                 :}
+                 inst++; :}
                  |PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr 
                  {:result litr = (result)lit;
                    result opr = (result)op;
@@ -659,7 +695,7 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    String t =temp_nuevo();
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                    RESULT = new result(t);
-                 :}
+                 inst++; :}
                  |PAR_LEFT:pl literal:lit PAR_RIGHT:pr operaciones:op op_aritmeticas:op_a
                  {:result litr = (result)lit;
                    result opr = (result)op;
@@ -667,12 +703,12 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    String t =temp_nuevo();
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t);
                    RESULT = new result(t);
-                 :}
+                 inst++; :}
                   
                  |PAR_LEFT:pl literal:lit PAR_RIGHT:pr
                  {:result litr = (result)lit;
                    RESULT = litr;
-                 :}
+                 inst++; :}
 
                  |PAR_LEFT:pl ID:id operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
                  {:result opr = (result)op;
@@ -685,14 +721,14 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen(opr2.valor.toString(),t,op_ar2.valor.toString(),t2);
                    RESULT = new result(t2);
 
-                 :}
+                 inst++; :}
                  |PAR_LEFT:pl ID:id operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr 
                  {:result opr = (result)op;
                    result op_ar=(result)op_a;
                    String t =temp_nuevo();
                    gen(opr.valor.toString(),id.toString(),op_ar.valor.toString(),t);
                    RESULT = new result(t);
-                 :}
+                 inst++; :}
 
                  |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
                  {:result litr = (result)lit;
@@ -705,7 +741,7 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t,parser.ambito);
                    gen(opr2.valor.toString(),t,op_ar2.valor.toString(),t2);
                    gen("=",t2,id.toString());
-                 :}
+                 inst++; :}
                  |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl literal:lit operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr
                  {:result litr = (result)lit;
                    result opr = (result)op;
@@ -714,7 +750,7 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen(opr.valor.toString(),litr.valor.toString(),op_ar.valor.toString(),t,parser.ambito);
                    gen("=",t,id.toString());
             
-                 :}
+                 inst++; :}
                  |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl ID:id1 operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr operaciones:op2 op_aritmeticas:op_a2
                  {:result opr = (result)op;
                    result op_ar=(result)op_a;
@@ -725,14 +761,14 @@ op_aritmeticas ::=tipos:tipo ID:id ASSIGNATIONS:asig literal:lit operaciones:op 
                    gen(opr.valor.toString(),id.toString(),op_ar.valor.toString(),t,parser.ambito);
                    gen(opr2.valor.toString(),t,op_ar2.valor.toString(),t2);
                    gen("=",t2,id.toString());
-                 :}
+                 inst++; :}
                  |tipos:tipo ID:id ASSIGNATIONS:asig PAR_LEFT:pl ID:id1 operaciones:op op_aritmeticas:op_a PAR_RIGHT:pr
                  {:result opr = (result)op;
                    result op_ar=(result)op_a;
                    String t = temp_nuevo();
                    gen(opr.valor.toString(),id1.toString(),op_ar.valor.toString(),t,parser.ambito);
                    gen("=",t,id.toString());
-                 :}
+                 inst++; :}
                  
                  ;
 
